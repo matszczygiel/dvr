@@ -4,10 +4,17 @@
 
 #include <eigen3/Eigen/Dense>
 
+using namespace std;
+
 int main(int argc, char const *argv[]) {
     // test potential
-    auto potential = [](double r) {
-        const double a[20] = {-0.065, 15939.056, -29646.778000000002, -6269.777, 44952.358,
+
+    const double D  = .016627;
+    const double a  = 0.37203199;
+    const double re = 8.77;
+
+    auto potential = [D, a, re](double r) {
+        /*       const double a[20] = {-0.065, 15939.056, -29646.778000000002, -6269.777, 44952.358,
                             8709.016, -100549.29, 594784.152, -995239.126, -1.14496717e7,
                             4.606463055e7, 3.7466657300000004e7, -5.439157146e8,
                             9.36483394e8, 1.387879748e9, -8.400905473e9, 1.5781752106e10,
@@ -40,13 +47,16 @@ int main(int argc, char const *argv[]) {
             return res / tocm;
         } else
             return (-C62 / pow(r, 6) - C8 / pow(r, 8) - C10 / pow(r, 10)) / tocm;
+            */
+
+        return D * (exp(-2. * a * (r - re)) - 2. * exp(-a * (r - re)));
     };
 
-    const int npoints = 4000;
-    const double rmin = 4.0;
+    const int npoints = 400;
+    const double rmin = 0.3;
     const double rmax = 10;
 
-    const double m = 80121.07031084;
+    const double m = 121135.90421321888;
     const int j    = 0;
 
     auto centrifugal = [m, j](double r) {
@@ -69,22 +79,22 @@ int main(int argc, char const *argv[]) {
     for (int i = 0; i < npoints; ++i)
         for (int j = 0; j <= i; ++j) {
             if (i == j) {
-                V(i, j) = potential(rmin + (i+1) * dx) + centrifugal(rmin + (i+1) * dx);
-                T(i, j) = pow(M_PI, 2) / 4. / pow(span, 2) * ((2. * pow(npo, 2) + 1) / 3. - 1. / pow(sin(M_PI * (i+1) / npo), 2));
-            }
-            else {
-                T(i, j) = pow(-1, i - j) * pow(M_PI, 2) / 4. / pow(span, 2) * 
-                ( 1. / pow(sin(M_PI * (i - j) / 2. / npo ), 2) -  1. / pow(sin(M_PI * (i + j + 2) / 2. / npo ), 2) );
+                V(i, j) = potential(rmin + (i + 1) * dx) + centrifugal(rmin + (i + 1) * dx);
+
+                T(i, j) = pow(M_PI, 2) / (4. * m * pow(span, 2)) * ((2. * pow(npo, 2) + 1) / 3. - 1. / pow(sin((M_PI * (i + 1)) / npo), 2));
+            } else {
+                T(i, j) = pow(-1, i - j) * pow(M_PI, 2) / (4. * m * pow(span, 2)) *
+                          (1. / pow(sin((M_PI * (i - j)) / (2. * npo)), 2) - 1. / pow(sin((M_PI * (i + j + 2)) / (2. * npo)), 2));
                 T(j, i) = T(i, j);
             }
-
         }
 
     MatrixXd H = T + V;
 
     Eigen::SelfAdjointEigenSolver<MatrixXd> es(H);
 
-    const double tomhz = 6.579695e9;
+    const double toeV = 27.2114;
+    const double tocm = 219474.63;
 
     using Eigen::VectorXd;
 
@@ -92,7 +102,15 @@ int main(int argc, char const *argv[]) {
     std::cout << '\n';
     std::cout << V.diagonal() << '\n';
     std::cout << '\n';
-    std::cout << lowest << '\n';
+    std::cout << lowest * tocm << '\n';
     std::cout << '\n';
 
+    auto ens = [D, a, re, m](int n) {
+        const double vd = sqrt(2 * m * D) / a - 0.5;
+        return -pow(a, 2) * pow(vd - n, 2) / (2. * m); 
+    };
+
+    for(int n = 0; n <= 22; ++n){
+        cout << ens(n) * tocm << '\n';
+    };
 }
