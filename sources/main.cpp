@@ -14,7 +14,7 @@ int main(int argc, char const *argv[]) {
     const double re = 8.77;
 
     auto potential = [D, a, re](double r) {
-        /*       const double a[20] = {-0.065, 15939.056, -29646.778000000002, -6269.777, 44952.358,
+     /*         const double a[20] = {-0.065, 15939.056, -29646.778000000002, -6269.777, 44952.358,
                             8709.016, -100549.29, 594784.152, -995239.126, -1.14496717e7,
                             4.606463055e7, 3.7466657300000004e7, -5.439157146e8,
                             9.36483394e8, 1.387879748e9, -8.400905473e9, 1.5781752106e10,
@@ -47,25 +47,28 @@ int main(int argc, char const *argv[]) {
             return res / tocm;
         } else
             return (-C62 / pow(r, 6) - C8 / pow(r, 8) - C10 / pow(r, 10)) / tocm;
-            */
+     */       
 
         return D * (exp(-2. * a * (r - re)) - 2. * exp(-a * (r - re)));
     };
 
     const int npoints = 400;
     const double rmin = 0.3;
-    const double rmax = 10;
+    const double rmax = 100;
 
-    const double m = 121135.90421321888;
+    const double m = 80121.07031084;
     const int j    = 0;
 
     auto centrifugal = [m, j](double r) {
         return j * (j + 1) / 2. / m / pow(r, 2);
     };
 
-    const double npo  = npoints + 1;
-    const double span = rmax - rmin;
-    const double dx   = span / npo;
+    const double npo = npoints + 1;
+        const double span = rmax - rmin;
+        const double dx   = span / npo;
+
+    //const double span = log(rmax) - log(rmin);
+    //const double dx   = span / npo;
 
     using Eigen::MatrixXd;
 
@@ -78,7 +81,7 @@ int main(int argc, char const *argv[]) {
 
     for (int i = 0; i < npoints; ++i)
         for (int j = 0; j <= i; ++j) {
-            if (i == j) {
+                      if (i == j) {
                 V(i, j) = potential(rmin + (i + 1) * dx) + centrifugal(rmin + (i + 1) * dx);
 
                 T(i, j) = pow(M_PI, 2) / (4. * m * pow(span, 2)) * ((2. * pow(npo, 2) + 1) / 3. - 1. / pow(sin((M_PI * (i + 1)) / npo), 2));
@@ -86,7 +89,21 @@ int main(int argc, char const *argv[]) {
                 T(i, j) = pow(-1, i - j) * pow(M_PI, 2) / (4. * m * pow(span, 2)) *
                           (1. / pow(sin((M_PI * (i - j)) / (2. * npo)), 2) - 1. / pow(sin((M_PI * (i + j + 2)) / (2. * npo)), 2));
                 T(j, i) = T(i, j);
-            }
+         }
+
+ /*           if (i == j) {
+                V(i, j) = potential(exp(log(rmin) + (i + 1) * dx)) + centrifugal(exp(log(rmin) + (i + 1) * dx));
+
+                T(i, j) = pow(M_PI, 2) / (4. * m * pow(span, 2)) * ((2. * pow(npo, 2) + 1) / 3. - 1. / pow(sin((M_PI * (i + 1)) / npo), 2)) +
+                          1. / (8. * m);
+                T(i, j) *= exp(-2. * (log(rmin) + (i + 1) * dx));
+            } else {
+                T(i, j) = pow(-1, i - j) * pow(M_PI, 2) / (4. * m * pow(span, 2)) *
+                          (1. / pow(sin((M_PI * (i - j)) / (2. * npo)), 2) - 1. / pow(sin((M_PI * (i + j + 2)) / (2. * npo)), 2));
+                T(i, j) *= exp(-2. * (log(rmin) + (i + 1) * dx));
+
+                T(j, i) = T(i, j);
+            }*/
         }
 
     MatrixXd H = T + V;
@@ -107,10 +124,10 @@ int main(int argc, char const *argv[]) {
 
     auto ens = [D, a, re, m](int n) {
         const double vd = sqrt(2 * m * D) / a - 0.5;
-        return -pow(a, 2) * pow(vd - n, 2) / (2. * m); 
+        return -pow(a, 2) * pow(vd - n, 2) / (2. * m);
     };
 
-    for(int n = 0; n <= 22; ++n){
+    for (int n = 0; n <= 22; ++n) {
         cout << ens(n) * tocm << '\n';
     };
 }
